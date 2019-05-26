@@ -3,12 +3,6 @@ const os = require('os')
 
 const pkgData = require('./package.json')
 
-const DELIMITERS = {
-  None: '',
-  CRLF: '\r\n',
-  LF: '\n'
-}
-
 module.exports = function (app) {
   let socket
   let onStop = []
@@ -20,26 +14,23 @@ module.exports = function (app) {
         socket.bind(options.ipaddress, function () {
         })
 
-        const delimiter = DELIMITERS[options.lineDelimiter] || ''
         const send = message => {
           if ((message.match('\!AIVDM') && options.aivdm) || 
               (message.match('\!AIVDO') && options.aivdo)) {
-            const msg = `${message}${delimiter}`
             socket.send(
-              msg,
+              message,
               0,
-              msg.length,
+              message.length,
               options.port,
               options.ipaddress
             )
           }
         }
-        if (typeof options.nmea0183 === 'undefined' || options.nmea0183) {
-          app.signalk.on('nmea0183', send)
-          onStop.push(() => {
-            app.signalk.removeListener('nmea0183', send)
-          })
-        }
+
+        app.signalk.on('nmea0183', send)
+        onStop.push(() => {
+          app.signalk.removeListener('nmea0183', send)
+        })
         app.setProviderStatus(`Using ip address ${options.ipaddress} port ${options.port}`)
       } else {
         app.setProviderError('No ip address specified')
@@ -82,12 +73,6 @@ function schema () {
         type: 'boolean',
         title: 'Forward AIVDM sentences (other vessels)',
         default: false
-      },
-      lineDelimiter: {
-        type: 'string',
-        title: 'Line delimiter',
-        enum: ['None', 'LF', 'CRLF'],
-        default: 'None'
       }
     }
   }
