@@ -1,0 +1,13 @@
+{
+  "name": "@signalk/ais-forwarder",
+  "version": "0.1.0",
+  "description": "AIS data (NMEA0183) forwarder",
+  "main": "index.js",
+  "keywords": [
+    "signalk-node-server-plugin"
+  ],
+  "author": "Harri Kapanen <harri.kapanen@iki.fi>",
+  "license": "Apache-2.0",
+  "dependencies": {
+  }
+}
