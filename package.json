@@ -1,6 +1,6 @@
 {
-  "name": "@signalk/ais-forwarder",
-  "version": "0.1.0",
+  "name": "ais-forwarder",
+  "version": "0.1.1",
   "description": "AIS data (NMEA0183) forwarder",
   "main": "index.js",
   "keywords": [
@@ -8,6 +8,16 @@
   ],
   "author": "Harri Kapanen <harri.kapanen@iki.fi>",
   "license": "Apache-2.0",
-  "dependencies": {
-  }
+  "dependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hkapanen/ais-forwarder.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hkapanen/ais-forwarder/issues"
+  },
+  "homepage": "https://github.com/hkapanen/ais-forwarder#readme"
 }
