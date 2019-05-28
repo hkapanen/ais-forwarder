@@ -15,8 +15,8 @@ module.exports = function (app) {
         })
 
         const send = message => {
-          if ((message.match('\!AIVDM') && options.aivdm) || 
-              (message.match('\!AIVDO') && options.aivdo)) {
+          if ((message.match(/!AIVDM/) && options.aivdm) || 
+              (message.match(/!AIVDO/) && options.aivdo)) {
             socket.send(
               message,
               0,
