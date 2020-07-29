@@ -27,9 +27,10 @@ module.exports = function (app) {
           }
         }
 
-        app.signalk.on('nmea0183', send)
+        const event = options.event || 'nmea0183'
+        app.signalk.on(event, send)
         onStop.push(() => {
-          app.signalk.removeListener('nmea0183', send)
+          app.signalk.removeListener(event, send)
         })
         app.setProviderStatus(`Using ip address ${options.ipaddress} port ${options.port}`)
       } else {
@@ -63,6 +64,11 @@ function schema () {
         type: 'number',
         title: 'Port',
         default: '12345'
+      },
+      event: {
+        type: 'string',
+        title: 'NMEA 0183 Event',
+        default: 'nmea0183'
       },
       aivdo: {
         type: 'boolean',
