@@ -17,6 +17,7 @@ module.exports = function (app) {
         const send = message => {
           if ((message.match(/!AIVDM/) && options.aivdm) || 
               (message.match(/!AIVDO/) && options.aivdo)) {
+            app.debug('sending %j', message)
             socket.send(
               message,
               0,
@@ -27,9 +28,16 @@ module.exports = function (app) {
           }
         }
 
-        app.signalk.on('nmea0183', send)
+        let eventsString = options.event || 'nmea0183'
+        let events = eventsString.split(',').map(s => s.trim())
+        app.debug(`using events %j`, events)
+        events.forEach(name => {
+          app.on(name, send)
+        })
         onStop.push(() => {
-          app.signalk.removeListener('nmea0183', send)
+          events.forEach(name => {
+            app.signalk.removeListener(name, send)
+          })
         })
         app.setProviderStatus(`Using ip address ${options.ipaddress} port ${options.port}`)
       } else {
@@ -63,6 +71,12 @@ function schema () {
         type: 'number',
         title: 'Port',
         default: '12345'
+      },
+      event: {
+        type: 'string',
+        title: 'NMEA 0183 Events',
+        default: 'nmea0183',
+        description: 'can be comma separated list'
       },
       aivdo: {
         type: 'boolean',
