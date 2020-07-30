@@ -15,6 +15,7 @@ module.exports = function (app) {
         })
 
         const send = message => {
+          app.debug('sending %j', message)
           if ((message.match(/!AIVDM/) && options.aivdm) || 
               (message.match(/!AIVDO/) && options.aivdo)) {
             socket.send(
@@ -28,7 +29,8 @@ module.exports = function (app) {
         }
 
         const event = options.event || 'nmea0183'
-        app.signalk.on(event, send)
+        app.debug(`using event ${event}`)
+        app.on(event, send)
         onStop.push(() => {
           app.signalk.removeListener(event, send)
         })
