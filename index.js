@@ -17,11 +17,11 @@ module.exports = function (app) {
       })
       socket = dgram.createSocket('udp4')
       const send = message => {
-        endpoints.forEach( endpoint => {
-          let key = `${endpoint.ipaddress}:${endpoint.port}`
-          if ((message.match(/!AIVDM/) && options.aivdm) || 
-              (message.match(/!AIVDO/) && options.aivdo)) {
-            message = message + '\n'
+        if ((message.match(/!AIVDM/) && options.aivdm) ||
+            (message.match(/!AIVDO/) && options.aivdo)) {
+          message = message + '\n'
+          endpoints.forEach( endpoint => {
+            let key = `${endpoint.ipaddress}:${endpoint.port}`
             app.debug(`sending to ${key}: `, message)
             if (socket) {
               socket.send(
@@ -32,8 +32,8 @@ module.exports = function (app) {
                 endpoint.ipaddress
               )
             }
-          }
-        })
+          })
+        }
       }
 
       let eventsString = options.event || 'nmea0183'
