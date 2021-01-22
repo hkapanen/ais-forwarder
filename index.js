@@ -4,49 +4,48 @@ const os = require('os')
 const pkgData = require('./package.json')
 
 module.exports = function (app) {
-  let socket
-  let onStop = []
+  var socket
+  var endpoints
 
   return {
     start: options => {
-      if (options.ipaddress) {
-        socket = dgram.createSocket('udp4')
-        socket.bind(options.ipaddress, function () {
-        })
-
-        const send = message => {
-          if ((message.match(/!AIVDM/) && options.aivdm) || 
-              (message.match(/!AIVDO/) && options.aivdo)) {
-            app.debug('sending %j', message)
-            socket.send(
-              message,
-              0,
-              message.length,
-              options.port,
-              options.ipaddress
-            )
-          }
-        }
-
-        let eventsString = options.event || 'nmea0183'
-        let events = eventsString.split(',').map(s => s.trim())
-        app.debug(`using events %j`, events)
-        events.forEach(name => {
-          app.on(name, send)
-        })
-        onStop.push(() => {
-          events.forEach(name => {
-            app.signalk.removeListener(name, send)
+      endpoints = options.endpoints
+      let endpointList = []
+      endpoints.forEach( endpoint => {
+          endpointList.push(`${endpoint.ipaddress}:${endpoint.port}`)
+          app.debug(`Adding endpoint: ${endpoint.ipaddress}:${endpoint.port}`)
+      })
+      socket = dgram.createSocket('udp4')
+      const send = message => {
+        if ((message.match(/!AIVDM/) && options.aivdm) ||
+            (message.match(/!AIVDO/) && options.aivdo)) {
+          message = message + '\n'
+          endpoints.forEach( endpoint => {
+            let key = `${endpoint.ipaddress}:${endpoint.port}`
+            app.debug(`sending to ${key}: `, message)
+            if (socket) {
+              socket.send(
+                message,
+                0,
+                message.length,
+                endpoint.port,
+                endpoint.ipaddress
+              )
+            }
           })
-        })
-        app.setProviderStatus(`Using ip address ${options.ipaddress} port ${options.port}`)
-      } else {
-        app.setProviderError('No ip address specified')
+        }
       }
+
+      let eventsString = options.event || 'nmea0183'
+      let events = eventsString.split(',').map(s => s.trim())
+      app.debug('Using events %j', events)
+      events.forEach(name => {
+        app.on(name, send)
+      })
+      app.setPluginStatus(`Emitting AIS messages to ${endpointList.join(', ')}`)
     },
     stop: () => {
-      onStop.forEach(f => f())
-      onStop = []
+      endpoints = []
       if (socket) {
         socket.close()
         socket = undefined
@@ -62,15 +61,25 @@ function schema () {
   return {
     type: 'object',
     properties: {
-      ipaddress: {
-        type: 'string',
-        title: 'IP Address',
-        default: '0.0.0.0'
-      },
-      port: {
-        type: 'number',
-        title: 'Port',
-        default: '12345'
+      endpoints: {
+        type: 'array',
+        title: 'UDP endpoints to send updates',
+        items: {
+          type: 'object',
+          required: ['ipaddress', 'port'],
+          properties: {
+            ipaddress: {
+              type: 'string',
+              title: 'UDP endpoint IP address',
+              default: '0.0.0.0'
+            },
+            port: {
+              type: 'number',
+              title: 'Port',
+              default: 12345
+            }
+          }
+        }
       },
       event: {
         type: 'string',

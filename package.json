@@ -1,12 +1,17 @@
 {
   "name": "ais-forwarder",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "AIS data (NMEA0183) forwarder",
   "main": "index.js",
   "keywords": [
-    "signalk-node-server-plugin"
+    "signalk-node-server-plugin",
+    "aisdispatcher"
   ],
   "author": "Harri Kapanen <harri.kapanen@iki.fi>",
+  "contributors": [
+    "Scott Bender <scott@scottbender.net>",
+    "Ilker Temir <ilker@ilkertemir.com>"
+  ],
   "license": "Apache-2.0",
   "dependencies": {},
   "scripts": {
