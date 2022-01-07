@@ -32,7 +32,11 @@ module.exports = function (app) {
         let events = eventsString.split(',').map(s => s.trim())
         app.debug(`using events %j`, events)
         events.forEach(name => {
-          app.on(name, send)
+          if (name == 'nmea0183') {
+            app.signalk.on(name, send)
+          } else {
+            app.on(name, send)
+          }
         })
         onStop.push(() => {
           events.forEach(name => {
