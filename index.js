@@ -20,6 +20,11 @@ module.exports = function (app) {
         if ((message.match(/!AIVDM/) && options.aivdm) ||
             (message.match(/!AIVDO/) && options.aivdo)) {
           message = message + '\n'
+
+          if (options.convertaivdo) {
+            message = message.replace('AIVDO', 'AIVDM')
+          }
+
           endpoints.forEach( endpoint => {
             let key = `${endpoint.ipaddress}:${endpoint.port}`
             app.debug(`sending to ${key}: `, message)
@@ -95,6 +100,11 @@ function schema () {
       aivdm: {
         type: 'boolean',
         title: 'Forward AIVDM sentences (other vessels)',
+        default: false
+      }
+      convertaivdo: {
+        type: 'boolean',
+        title: 'Convert AIVDO to AIVDM sentences (For endpoints not supporting AIVDO)',
         default: false
       }
     }
