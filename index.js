@@ -101,7 +101,7 @@ function schema () {
         type: 'boolean',
         title: 'Forward AIVDM sentences (other vessels)',
         default: false
-      }
+      },
       convertaivdo: {
         type: 'boolean',
         title: 'Convert AIVDO to AIVDM sentences (For endpoints not supporting AIVDO)',
