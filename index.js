@@ -22,7 +22,7 @@ module.exports = function (app) {
           message = message + '\n'
 
           if (options.convertaivdo) {
-            message = message.replace('AIVDO', 'AIVDM')
+            message = message.replace('!AIVDO', '!AIVDM')
           }
 
           endpoints.forEach( endpoint => {
