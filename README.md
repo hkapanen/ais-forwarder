@@ -8,4 +8,4 @@ This plugin can also be used with NMEA 2K AIS receivers by converting the data f
 
 Output can be debugged with `nc -ulkw 0 <ipaddress> <port>`.
 
-NOTE: existing plugin users need to re-configure the destination after upgrading to the latest version!
+NOTE: Existing plugin users upgrading from version 0.2 or below to 0.3 or higher need to re-configure their endpoints!
