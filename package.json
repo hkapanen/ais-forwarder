@@ -1,6 +1,6 @@
 {
   "name": "ais-forwarder",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "AIS data (NMEA0183) forwarder",
   "main": "index.js",
   "keywords": [
