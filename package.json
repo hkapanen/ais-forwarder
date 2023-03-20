@@ -5,6 +5,8 @@
   "main": "index.js",
   "keywords": [
     "signalk-node-server-plugin",
+    "signalk-category-ais",
+    "signalk-category-nmea-0183",
     "aisdispatcher"
   ],
   "author": "Harri Kapanen <harri.kapanen@iki.fi>",
