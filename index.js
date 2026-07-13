@@ -23,6 +23,7 @@ module.exports = function (app) {
           // If option is enabled, convert the AIVDO to an AIVMD sentence
           if (options.convertaivdo) {
             let messageParts = message.split(',')
+            if (messageParts.length < 7) return  // malformed/short AIS sentence: avoid undefined split on messageParts[6]
 
             let sentenceFragmentCount = messageParts[1]
             let sentenceFragment = messageParts[2]
