@@ -1,7 +1,8 @@
 const test = require('node:test')
 const assert = require('node:assert')
-const dgram = require('dgram')
-const EventEmitter = require('events')
+const dgram = require('node:dgram')
+const dns = require('node:dns')
+const { EventEmitter, once } = require('node:events')
 
 const plugin = require('../index.js')
 
@@ -23,47 +24,72 @@ function listen () {
   })
 }
 
-const tick = ms => new Promise(resolve => setTimeout(resolve, ms))
-
-test('forwards AIVDM to an IP endpoint', async () => {
+test('forwards AIVDM to an IP endpoint', { timeout: 3000 }, async t => {
   const server = await listen()
-  const received = new Promise(resolve => server.once('message', m => resolve(m.toString())))
+  t.after(() => server.close())
+  const received = once(server, 'message', { signal: AbortSignal.timeout(2000) })
   const app = fakeApp()
   const p = plugin(app)
+  t.after(() => p.stop())
   p.start({ endpoints: [{ ipaddress: '127.0.0.1', port: server.address().port }], aivdm: true })
   app.emit('nmea0183', AIVDM)
-  assert.strictEqual(await received, AIVDM + '\n')
-  p.stop()
-  server.close()
+  const [message] = await received
+  assert.strictEqual(message.toString(), AIVDM + '\n')
 })
 
-test('forwards to a hostname endpoint after it is resolved', async () => {
+test('forwards to a hostname endpoint after it is resolved', { timeout: 3000 }, async t => {
   const server = await listen()
-  const received = new Promise(resolve => server.once('message', m => resolve(m.toString())))
+  t.after(() => server.close())
+  const received = once(server, 'message', { signal: AbortSignal.timeout(2000) })
+
+  let signalResolved
+  const resolved = new Promise(resolve => { signalResolved = resolve })
+  const realLookup = dns.lookup
+  t.mock.method(dns, 'lookup', (hostname, options, callback) => {
+    // Node's UDP sockets also use dns.lookup() internally for binding.
+    if (hostname !== 'localhost') return realLookup(hostname, options, callback)
+    assert.deepStrictEqual(options, { family: 4 })
+    queueMicrotask(() => {
+      callback(null, '127.0.0.1', 4)
+      signalResolved()
+    })
+  })
+
   const app = fakeApp()
   const p = plugin(app)
+  t.after(() => p.stop())
   p.start({ endpoints: [{ ipaddress: 'localhost', port: server.address().port }], aivdm: true })
-  await tick(200)
+  await resolved
   app.emit('nmea0183', AIVDM)
-  assert.strictEqual(await received, AIVDM + '\n')
-  p.stop()
-  server.close()
+  const [message] = await received
+  assert.strictEqual(message.toString(), AIVDM + '\n')
 })
 
-test('an unresolvable hostname is logged and skipped, never thrown', async () => {
-  const uncaught = []
-  const onUncaught = err => uncaught.push(err)
-  process.on('uncaughtException', onUncaught)
+test('an unresolvable hostname is logged and skipped, never thrown', { timeout: 3000 }, async t => {
+  let signalLookupDone
+  const lookupDone = new Promise(resolve => { signalLookupDone = resolve })
+  const realLookup = dns.lookup
+  t.mock.method(dns, 'lookup', (hostname, options, callback) => {
+    if (hostname !== 'no-such-host.invalid') return realLookup(hostname, options, callback)
+    assert.deepStrictEqual(options, { family: 4 })
+    queueMicrotask(() => {
+      const err = Object.assign(new Error('getaddrinfo ENOTFOUND no-such-host.invalid'), {
+        code: 'ENOTFOUND'
+      })
+      callback(err)
+      signalLookupDone()
+    })
+  })
+
   const app = fakeApp()
   const p = plugin(app)
+  t.after(() => p.stop())
   p.start({ endpoints: [{ ipaddress: 'no-such-host.invalid', port: 12345 }], aivdm: true })
   for (let i = 0; i < 20; i++) app.emit('nmea0183', AIVDM)
-  await tick(1000)
+  await lookupDone
   for (let i = 0; i < 20; i++) app.emit('nmea0183', AIVDM)
-  await tick(200)
-  p.stop()
-  process.removeListener('uncaughtException', onUncaught)
-  assert.deepStrictEqual(uncaught, [])
+
+  // The Node test runner itself fails on any uncaught exception.
   assert.strictEqual(app.errors.length, 1, 'logged once, not once per sentence')
   assert.match(app.errors[0], /no-such-host\.invalid:12345: cannot resolve hostname/)
 })
