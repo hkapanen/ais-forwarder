@@ -1,6 +1,6 @@
 {
   "name": "ais-forwarder",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "AIS data (NMEA0183) forwarder",
   "main": "index.js",
   "keywords": [
@@ -17,7 +17,7 @@
   "license": "Apache-2.0",
   "dependencies": {},
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test"
   },
   "repository": {
     "type": "git",

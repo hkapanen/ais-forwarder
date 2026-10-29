@@ -1,21 +1,65 @@
 const dgram = require('dgram')
+const dns = require('dns')
+const net = require('net')
 const os = require('os')
 
 const pkgData = require('./package.json')
 
+// Hostnames are resolved once at start and then every RESOLVE_INTERVAL_MS,
+// so sending a datagram never waits for (or fails on) a DNS lookup.
+const RESOLVE_INTERVAL_MS = 10 * 60 * 1000
+// Send errors (e.g. network down) are logged at most once per endpoint per
+// ERROR_LOG_INTERVAL_MS, so a lost link does not flood the log.
+const ERROR_LOG_INTERVAL_MS = 60 * 1000
+
 module.exports = function (app) {
   var socket
   var endpoints
+  var resolveTimer
+
+  const logError = (endpoint, text) => {
+    const now = Date.now()
+    if (endpoint.lastErrorLog && now - endpoint.lastErrorLog < ERROR_LOG_INTERVAL_MS) {
+      return
+    }
+    endpoint.lastErrorLog = now
+    app.error(`${endpoint.ipaddress}:${endpoint.port}: ${text}`)
+  }
+
+  const resolve = endpoint => {
+    if (net.isIP(endpoint.ipaddress)) {
+      endpoint.address = endpoint.ipaddress
+      return
+    }
+    dns.lookup(endpoint.ipaddress, { family: 4 }, (err, address) => {
+      if (err) {
+        // Keep the last good address, if any; otherwise the endpoint is skipped.
+        logError(endpoint, `cannot resolve hostname: ${err.message}`)
+        return
+      }
+      if (address !== endpoint.address) {
+        app.debug(`${endpoint.ipaddress} resolved to ${address}`)
+      }
+      endpoint.address = address
+    })
+  }
 
   return {
     start: options => {
-      endpoints = options.endpoints
+      endpoints = (options.endpoints || []).map(endpoint => Object.assign({}, endpoint))
       let endpointList = []
       endpoints.forEach( endpoint => {
           endpointList.push(`${endpoint.ipaddress}:${endpoint.port}`)
           app.debug(`Adding endpoint: ${endpoint.ipaddress}:${endpoint.port}`)
       })
       socket = dgram.createSocket('udp4')
+      // Without an 'error' listener a socket error is thrown as an
+      // uncaught exception in the Signal K server process.
+      socket.on('error', err => {
+        app.error(`UDP socket error: ${err.message}`)
+      })
+      endpoints.forEach(resolve)
+      resolveTimer = setInterval(() => endpoints.forEach(resolve), RESOLVE_INTERVAL_MS)
       const send = message => {
         if ((message.match(/!AIVDM/) && options.aivdm) ||
             (message.match(/!AIVDO/) && options.aivdo)) {
@@ -54,13 +98,18 @@ module.exports = function (app) {
           endpoints.forEach( endpoint => {
             let key = `${endpoint.ipaddress}:${endpoint.port}`
             app.debug(`sending to ${key}: `, message)
-            if (socket) {
+            if (socket && endpoint.address) {
               socket.send(
                 message,
                 0,
                 message.length,
                 endpoint.port,
-                endpoint.ipaddress
+                endpoint.address,
+                err => {
+                  if (err) {
+                    logError(endpoint, `send failed: ${err.message}`)
+                  }
+                }
               )
             }
           })
@@ -77,6 +126,10 @@ module.exports = function (app) {
     },
     stop: () => {
       endpoints = []
+      if (resolveTimer) {
+        clearInterval(resolveTimer)
+        resolveTimer = undefined
+      }
       if (socket) {
         socket.close()
         socket = undefined
@@ -101,7 +154,7 @@ function schema () {
           properties: {
             ipaddress: {
               type: 'string',
-              title: 'UDP endpoint IP address',
+              title: 'UDP endpoint IP address or hostname',
               default: '0.0.0.0'
             },
             port: {
