@@ -93,3 +93,21 @@ test('an unresolvable hostname is logged and skipped, never thrown', { timeout: 
   assert.strictEqual(app.errors.length, 1, 'logged once, not once per sentence')
   assert.match(app.errors[0], /no-such-host\.invalid:12345: cannot resolve hostname/)
 })
+
+test('a restart forwards each sentence once, not once per start', { timeout: 3000 }, async t => {
+  const server = await listen()
+  t.after(() => server.close())
+  const messages = []
+  server.on('message', m => messages.push(m.toString()))
+  const app = fakeApp()
+  const p = plugin(app)
+  t.after(() => p.stop())
+  const options = { endpoints: [{ ipaddress: '127.0.0.1', port: server.address().port }], aivdm: true }
+  p.start(options)
+  p.stop()
+  p.start(options)
+  assert.strictEqual(app.listenerCount('nmea0183'), 1)
+  app.emit('nmea0183', AIVDM)
+  await new Promise(resolve => setTimeout(resolve, 300))
+  assert.deepStrictEqual(messages, [AIVDM + '\n'])
+})
