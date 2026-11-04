@@ -16,6 +16,9 @@ module.exports = function (app) {
   var socket
   var endpoints
   var resolveTimer
+  // [event, handler] pairs added in start(), removed again in stop();
+  // otherwise every restart adds one more handler for each event.
+  var listeners = []
 
   const logError = (endpoint, text) => {
     const now = Date.now()
@@ -121,10 +124,13 @@ module.exports = function (app) {
       app.debug('Using events %j', events)
       events.forEach(name => {
         app.on(name, send)
+        listeners.push([name, send])
       })
       app.setPluginStatus(`Emitting AIS messages to ${endpointList.join(', ')}`)
     },
     stop: () => {
+      listeners.forEach(([name, handler]) => app.removeListener(name, handler))
+      listeners = []
       endpoints = []
       if (resolveTimer) {
         clearInterval(resolveTimer)
