@@ -1,0 +1,36 @@
+name: Publish to npm
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Check npm supports trusted publishing
+        run: |
+          npm --version
+          node -e "const v = require('child_process').execFileSync('npm', ['--version'], {encoding:'utf8'}).trim().split('.').map(Number); if (v[0] < 11 || (v[0] === 11 && (v[1] < 5 || (v[1] === 5 && v[2] < 1)))) { console.error('npm >= 11.5.1 required'); process.exit(1) }"
+      - name: Check release tag matches package version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          test "v${VERSION}" = "$GITHUB_REF_NAME"
+      - name: Run tests
+        run: npm test
+      - name: Publish to npm with OIDC
+        run: npm publish --access public
