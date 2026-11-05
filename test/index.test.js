@@ -111,3 +111,63 @@ test('a restart forwards each sentence once, not once per start', { timeout: 300
   await new Promise(resolve => setTimeout(resolve, 300))
   assert.deepStrictEqual(messages, [AIVDM + '\n'])
 })
+
+
+test('reports activity once for multiple endpoints', { timeout: 3000 }, async t => {
+  const first = await listen()
+  const second = await listen()
+  t.after(() => first.close())
+  t.after(() => second.close())
+
+  const received1 = once(first, 'message', { signal: AbortSignal.timeout(2000) })
+  const received2 = once(second, 'message', { signal: AbortSignal.timeout(2000) })
+
+  const app = fakeApp()
+  const reports = []
+  app.reportOutputMessages = count => reports.push(count)
+
+  const p = plugin(app)
+  t.after(() => p.stop())
+
+  p.start({
+    endpoints: [
+      { ipaddress: '127.0.0.1', port: first.address().port },
+      { ipaddress: '127.0.0.1', port: second.address().port }
+    ],
+    aivdm: true
+  })
+
+  app.emit('nmea0183', AIVDM)
+
+  const [[m1], [m2]] = await Promise.all([received1, received2])
+  await new Promise(resolve => setImmediate(resolve))
+
+  assert.strictEqual(m1.toString(), AIVDM + '\n')
+  assert.strictEqual(m2.toString(), AIVDM + '\n')
+  assert.deepStrictEqual(reports, [1])
+})
+
+test('does not report activity for filtered or unsent messages', async t => {
+  const app = fakeApp()
+  const reports = []
+  app.reportOutputMessages = count => reports.push(count)
+
+  const p = plugin(app)
+  t.after(() => p.stop())
+
+  p.start({ endpoints: [], aivdm: true })
+  app.emit('nmea0183', AIVDM)
+
+  p.stop()
+
+  p.start({
+    endpoints: [{ ipaddress: '127.0.0.1', port: 12345 }],
+    aivdm: false,
+    aivdo: false
+  })
+
+  app.emit('nmea0183', AIVDM)
+
+  await new Promise(resolve => setImmediate(resolve))
+  assert.deepStrictEqual(reports, [])
+})
