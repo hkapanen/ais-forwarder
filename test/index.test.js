@@ -121,18 +121,6 @@ test('optional endpoint names appear in status without changing forwarding', { t
   const app = fakeApp()
   let status = ''
   app.setPluginStatus = message => { status = message }
-test('reports activity once for multiple endpoints', { timeout: 3000 }, async t => {
-  const first = await listen()
-  const second = await listen()
-  t.after(() => first.close())
-  t.after(() => second.close())
-
-  const received1 = once(first, 'message', { signal: AbortSignal.timeout(2000) })
-  const received2 = once(second, 'message', { signal: AbortSignal.timeout(2000) })
-
-  const app = fakeApp()
-  const reports = []
-  app.reportOutputMessages = count => reports.push(count)
 
   const p = plugin(app)
   t.after(() => p.stop())
@@ -202,6 +190,24 @@ test('endpoint name is optional in the configuration schema', () => {
   assert.deepStrictEqual(endpoint.required, ['ipaddress', 'port'])
   assert.strictEqual(endpoint.properties.name.type, 'string')
   assert.strictEqual(endpoint.properties.name.default, '')
+})
+
+test('reports activity once for multiple endpoints', { timeout: 3000 }, async t => {
+  const first = await listen()
+  const second = await listen()
+  t.after(() => first.close())
+  t.after(() => second.close())
+
+  const received1 = once(first, 'message', { signal: AbortSignal.timeout(2000) })
+  const received2 = once(second, 'message', { signal: AbortSignal.timeout(2000) })
+
+  const app = fakeApp()
+  const reports = []
+  app.reportOutputMessages = count => reports.push(count)
+
+  const p = plugin(app)
+  t.after(() => p.stop())
+
   p.start({
     endpoints: [
       { ipaddress: '127.0.0.1', port: first.address().port },
