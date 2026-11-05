@@ -20,13 +20,20 @@ module.exports = function (app) {
   // otherwise every restart adds one more handler for each event.
   var listeners = []
 
+  const endpointLabel = endpoint => {
+    const address = `${endpoint.ipaddress}:${endpoint.port}`
+    const name = typeof endpoint.name === 'string'
+      ? endpoint.name.trim()
+      : ''
+    return name ? `${name} (${address})` : address
+  }
   const logError = (endpoint, text) => {
     const now = Date.now()
     if (endpoint.lastErrorLog && now - endpoint.lastErrorLog < ERROR_LOG_INTERVAL_MS) {
       return
     }
     endpoint.lastErrorLog = now
-    app.error(`${endpoint.ipaddress}:${endpoint.port}: ${text}`)
+    app.error(`${endpointLabel(endpoint)}: ${text}`)
   }
 
   const resolve = endpoint => {
@@ -41,7 +48,7 @@ module.exports = function (app) {
         return
       }
       if (address !== endpoint.address) {
-        app.debug(`${endpoint.ipaddress} resolved to ${address}`)
+        app.debug(`${endpointLabel(endpoint)} resolved to ${address}`)
       }
       endpoint.address = address
     })
@@ -52,8 +59,8 @@ module.exports = function (app) {
       endpoints = (options.endpoints || []).map(endpoint => Object.assign({}, endpoint))
       let endpointList = []
       endpoints.forEach( endpoint => {
-          endpointList.push(`${endpoint.ipaddress}:${endpoint.port}`)
-          app.debug(`Adding endpoint: ${endpoint.ipaddress}:${endpoint.port}`)
+          endpointList.push(endpointLabel(endpoint))
+          app.debug(`Adding endpoint: ${endpointLabel(endpoint)}`)
       })
       socket = dgram.createSocket('udp4')
       // Without an 'error' listener a socket error is thrown as an
@@ -99,7 +106,7 @@ module.exports = function (app) {
           message = message + '\n'
 
           endpoints.forEach( endpoint => {
-            let key = `${endpoint.ipaddress}:${endpoint.port}`
+            let key = endpointLabel(endpoint)
             app.debug(`sending to ${key}: `, message)
             if (socket && endpoint.address) {
               socket.send(
@@ -158,6 +165,12 @@ function schema () {
           type: 'object',
           required: ['ipaddress', 'port'],
           properties: {
+            name: {
+              type: 'string',
+              title: 'Endpoint name (optional)',
+              description: 'Identification only; does not affect AIS forwarding.',
+              default: ''
+            },
             ipaddress: {
               type: 'string',
               title: 'UDP endpoint IP address or hostname',
