@@ -171,3 +171,40 @@ test('does not report activity for filtered or unsent messages', async t => {
   await new Promise(resolve => setImmediate(resolve))
   assert.deepStrictEqual(reports, [])
 })
+
+
+test('does not report activity when all UDP sends fail', async t => {
+  const fakeSocket = new EventEmitter()
+  let sendCalls = 0
+
+  fakeSocket.send = (...args) => {
+    sendCalls++
+    const callback = args[args.length - 1]
+    queueMicrotask(() => callback(new Error('simulated send failure')))
+  }
+  fakeSocket.close = () => {}
+
+  t.mock.method(dgram, 'createSocket', () => fakeSocket)
+
+  const app = fakeApp()
+  const reports = []
+  app.reportOutputMessages = count => reports.push(count)
+
+  const p = plugin(app)
+  t.after(() => p.stop())
+
+  p.start({
+    endpoints: [
+      { ipaddress: '127.0.0.1', port: 11199 },
+      { ipaddress: '127.0.0.1', port: 5278 }
+    ],
+    aivdm: true
+  })
+
+  app.emit('nmea0183', AIVDM)
+  await new Promise(resolve => setImmediate(resolve))
+
+  assert.strictEqual(sendCalls, 2)
+  assert.strictEqual(app.errors.length, 2)
+  assert.deepStrictEqual(reports, [])
+})
