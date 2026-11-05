@@ -105,6 +105,7 @@ module.exports = function (app) {
 
           message = message + '\n'
 
+          let reported = false
           endpoints.forEach( endpoint => {
             let key = endpointLabel(endpoint)
             app.debug(`sending to ${key}: `, message)
@@ -118,6 +119,9 @@ module.exports = function (app) {
                 err => {
                   if (err) {
                     logError(endpoint, `send failed: ${err.message}`)
+                  } else if (!reported && typeof app.reportOutputMessages === 'function') {
+                    reported = true
+                    app.reportOutputMessages(1)
                   }
                 }
               )
