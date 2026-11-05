@@ -113,6 +113,85 @@ test('a restart forwards each sentence once, not once per start', { timeout: 300
 })
 
 
+test('optional endpoint names appear in status without changing forwarding', { timeout: 3000 }, async t => {
+  const server = await listen()
+  t.after(() => server.close())
+
+  const received = once(server, 'message', { signal: AbortSignal.timeout(2000) })
+  const app = fakeApp()
+  let status = ''
+  app.setPluginStatus = message => { status = message }
+
+  const p = plugin(app)
+  t.after(() => p.stop())
+
+  const port = server.address().port
+  p.start({
+    endpoints: [{
+      name: '  Test receiver  ',
+      ipaddress: '127.0.0.1',
+      port
+    }],
+    aivdm: true
+  })
+
+  assert.strictEqual(
+    status,
+    `Emitting AIS messages to Test receiver (127.0.0.1:${port})`
+  )
+
+  app.emit('nmea0183', AIVDM)
+  const [message] = await received
+  assert.strictEqual(message.toString(), AIVDM + '\n')
+})
+
+test('endpoint names appear in DNS errors with hostname and port', { timeout: 3000 }, async t => {
+  const hostname = 'no-such-host.invalid'
+  const realLookup = dns.lookup
+
+  let lookupDone
+  const completed = new Promise(resolve => { lookupDone = resolve })
+
+  t.mock.method(dns, 'lookup', (host, options, callback) => {
+    if (host !== hostname) return realLookup(host, options, callback)
+    queueMicrotask(() => {
+      callback(new Error('ENOTFOUND'))
+      lookupDone()
+    })
+  })
+
+  const app = fakeApp()
+  const p = plugin(app)
+  t.after(() => p.stop())
+
+  p.start({
+    endpoints: [{
+      name: 'Remote receiver',
+      ipaddress: hostname,
+      port: 12345
+    }],
+    aivdm: true
+  })
+
+  await completed
+
+  assert.strictEqual(app.errors.length, 1)
+  assert.match(
+    app.errors[0],
+    /Remote receiver \(no-such-host\.invalid:12345\): cannot resolve hostname/
+  )
+})
+
+test('endpoint name is optional in the configuration schema', () => {
+  const app = fakeApp()
+  const schema = plugin(app).schema()
+  const endpoint = schema.properties.endpoints.items
+
+  assert.deepStrictEqual(endpoint.required, ['ipaddress', 'port'])
+  assert.strictEqual(endpoint.properties.name.type, 'string')
+  assert.strictEqual(endpoint.properties.name.default, '')
+})
+
 test('reports activity once for multiple endpoints', { timeout: 3000 }, async t => {
   const first = await listen()
   const second = await listen()
