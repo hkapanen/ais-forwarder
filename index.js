@@ -56,6 +56,17 @@ module.exports = function (app) {
 
   return {
     start: options => {
+      const seenEndpoints = new Map()
+      for (const [index, endpoint] of (options.endpoints || []).entries()) {
+        const key = JSON.stringify([endpoint.ipaddress.trim().toLowerCase(), Number(endpoint.port)])
+        if (seenEndpoints.has(key)) {
+          throw new Error(
+            `Duplicate UDP endpoint: ${endpointLabel(endpoint)} (entries ${seenEndpoints.get(key) + 1} and ${index + 1}). ` +
+            'Remove the duplicate or use a different address or port, then save your settings.'
+          )
+        }
+        seenEndpoints.set(key, index)
+      }
       endpoints = (options.endpoints || []).map(endpoint => Object.assign({}, endpoint))
       let endpointList = []
       endpoints.forEach( endpoint => {
@@ -165,6 +176,7 @@ function schema () {
       endpoints: {
         type: 'array',
         title: 'UDP endpoints to send updates',
+        description: 'Use each hostname/IP address and port combination only once, even if the endpoint names differ.',
         items: {
           type: 'object',
           required: ['ipaddress', 'port'],
