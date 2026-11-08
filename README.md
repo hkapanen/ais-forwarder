@@ -6,11 +6,14 @@
 
 ## Configuration
 
-For new configurations, `aivdm` (forward other vessels' AIVDM sentences) defaults to `true`. Both `aivdo` (forward own-vessel AIVDO sentences) and `convertaivdo` (convert AIVDO to AIVDM) still default to `false`.
+1. Add a UDP endpoint using the hostname or IP address and port supplied by your receiving service. You can add multiple endpoints to share AIS data with more than one service.
+2. Choose which messages to forward. **AIVDM (other vessels)** is selected by default for new configurations. Enable **AIVDO (own vessel)** if you also want to share your own vessel's AIS messages; it is off by default.
+3. If your receiving service requires own-vessel messages in AIVDM format, enable **Convert AIVDO to AIVDM** together with AIVDO forwarding. Conversion is off by default.
+4. Enable the plugin and save your settings to start forwarding incoming AIS messages.
 
-Existing saved settings are preserved, including an explicit `aivdm: false`. The new default applies to the configuration form; startup does not rewrite saved options or enable an omitted message-type option in an older configuration.
+Your existing saved settings are kept when you upgrade.
 
-Configure at least one UDP endpoint and enable the message types you want to forward. With no endpoints configured (an empty or omitted `endpoints` list), the plugin reports **Inactive: no UDP endpoints configured**, even if AIVDM or AIVDO forwarding is enabled. It creates no UDP socket, DNS refresh timer, or NMEA event listeners, and reports no forwarding activity. After adding an endpoint, save/restart the plugin to begin forwarding.
+If the status shows **Inactive: no UDP endpoints configured**, add at least one destination and save your settings. Selecting a message type alone is not enough to start forwarding.
 
 Each UDP endpoint can optionally have a `name` to make destinations easier to identify. The name is displayed alongside the hostname/IP address and port in plugin status messages and diagnostic logs. It is used for identification only and does not affect AIS forwarding behavior.
 
