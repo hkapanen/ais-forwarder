@@ -4,7 +4,16 @@
 
 ![screenshot](./ais-forwarder.png)
 
+## Configuration
+
+For new configurations, `aivdm` (forward other vessels' AIVDM sentences) defaults to `true`. Both `aivdo` (forward own-vessel AIVDO sentences) and `convertaivdo` (convert AIVDO to AIVDM) still default to `false`.
+
+Existing saved settings are preserved, including an explicit `aivdm: false`. The new default applies to the configuration form; startup does not rewrite saved options or enable an omitted message-type option in an older configuration.
+
+Configure at least one UDP endpoint and enable the message types you want to forward. With no endpoints configured (an empty or omitted `endpoints` list), the plugin reports **Inactive: no UDP endpoints configured**, even if AIVDM or AIVDO forwarding is enabled. It creates no UDP socket, DNS refresh timer, or NMEA event listeners, and reports no forwarding activity. After adding an endpoint, save/restart the plugin to begin forwarding.
+
 Each UDP endpoint can optionally have a `name` to make destinations easier to identify. The name is displayed alongside the hostname/IP address and port in plugin status messages and diagnostic logs. It is used for identification only and does not affect AIS forwarding behavior.
+
 ## Plugin Activity
 
 AIS Forwarder reports forwarding activity to Signal K's built-in Plugin Activity indicator in the dashboard. This provides a quick visual check that AIS messages are being forwarded.
