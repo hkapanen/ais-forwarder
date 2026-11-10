@@ -4,7 +4,19 @@
 
 ![screenshot](./ais-forwarder.png)
 
+## Configuration
+
+1. Add a UDP endpoint using the hostname or IP address and port supplied by your receiving service. You can add multiple endpoints to share AIS data with more than one service.
+2. Choose which messages to forward. **AIVDM (other vessels)** is selected by default for new configurations. Enable **AIVDO (own vessel)** if you also want to share your own vessel's AIS messages; it is off by default.
+3. If your receiving service requires own-vessel messages in AIVDM format, enable **Convert AIVDO to AIVDM** together with AIVDO forwarding. Conversion is off by default.
+4. Enable the plugin and save your settings to start forwarding incoming AIS messages.
+
+Your existing saved settings are kept when you upgrade.
+
+If the status shows **Inactive: no UDP endpoints configured**, add at least one destination and save your settings. Selecting a message type alone is not enough to start forwarding.
+
 Each UDP endpoint can optionally have a `name` to make destinations easier to identify. The name is displayed alongside the hostname/IP address and port in plugin status messages and diagnostic logs. It is used for identification only and does not affect AIS forwarding behavior.
+
 ## Plugin Activity
 
 AIS Forwarder reports forwarding activity to Signal K's built-in Plugin Activity indicator in the dashboard. This provides a quick visual check that AIS messages are being forwarded.

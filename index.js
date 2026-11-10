@@ -68,6 +68,10 @@ module.exports = function (app) {
         seenEndpoints.set(key, index)
       }
       endpoints = (options.endpoints || []).map(endpoint => Object.assign({}, endpoint))
+      if (endpoints.length === 0) {
+        app.setPluginStatus('Inactive: no UDP endpoints configured')
+        return
+      }
       let endpointList = []
       endpoints.forEach( endpoint => {
           endpointList.push(endpointLabel(endpoint))
@@ -214,7 +218,7 @@ function schema () {
       aivdm: {
         type: 'boolean',
         title: 'Forward AIVDM sentences (other vessels)',
-        default: false
+        default: true
       },
       convertaivdo: {
         type: 'boolean',
